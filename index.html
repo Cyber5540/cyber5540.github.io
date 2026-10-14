@@ -353,7 +353,7 @@ footer{border-top:1px solid var(--line);padding:28px 20px calc(28px + env(safe-a
 .res{animation:rise .5s both;animation-delay:calc(var(--i)*.5s)}
 .res .match{display:block}
 /* page views */
-.topbar{margin-bottom:22px}
+.topbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;margin-bottom:22px}
 .flip{transform:rotate(180deg)}
 .donebar{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:32px;border-color:rgba(34,197,94,.55);background:rgba(34,197,94,.09);animation:rise .4s both}
 .donebar .ic{color:var(--green);width:1.6em;height:1.6em}
@@ -536,6 +536,8 @@ priv:{eyebrow:"Take Control of Your Digital Footprint",
  finish:"FINISH THE CHALLENGE",finished:"Challenge finished",
  takeaway:"You do not need to change everything at once. A few habits, repeated, protect more than one big effort."},
 backHome:"Back to home",
+nextChallenge:"Next challenge",
+nextFinal:"See final page",
 locked:"Locked",
 lockedNote:"Finish the first four challenges to unlock this one.",
 unlocked:"The last challenge is unlocked!",
@@ -693,6 +695,8 @@ priv:{eyebrow:"Dijital İzinizin Kontrolünü Elinize Alın",
  finish:"ETKİNLİĞİ BİTİR",finished:"Etkinlik bitti",
  takeaway:"Her şeyi bir anda değiştirmeniz gerekmez. Tekrarlanan birkaç alışkanlık, tek bir büyük çabadan daha fazlasını korur."},
 backHome:"Ana sayfaya dön",
+nextChallenge:"Sonraki etkinlik",
+nextFinal:"Son sayfayı gör",
 locked:"Kilitli",
 lockedNote:"Bu etkinliğin kilidini açmak için ilk dört etkinliği bitirin.",
 unlocked:"Son etkinliğin kilidi açıldı!",
@@ -819,7 +823,7 @@ function avatar(v){
 /* ---------- generic pieces ---------- */
 function head(key,n){
  const s=L()[key];
- return '<div class="topbar"><button class="btn btn-ghost btn-sm" data-action="go" data-target="home">'+ic('arrow','flip')+L().backHome+'</button></div><div class="sec-head"><p class="eyebrow"><span>'+fmt(L().chal,{n:n})+' · '+s.eyebrow+'</span><span class="badge-done" data-badge="'+key+'"'+(S.done[key]?'':' hidden')+'>'+ic('check')+L().doneLabel+'</span></p><h2 class="statement">'+s.statement+'</h2><p class="intro">'+s.intro+'</p></div>';
+ return '<div class="topbar"><button class="btn btn-ghost btn-sm" data-action="go" data-target="home">'+ic('arrow','flip')+L().backHome+'</button>'+(key!=='priv'?'<button class="btn btn-ghost btn-sm" data-action="next" data-from="'+key+'">'+L().nextChallenge+ic('arrow')+'</button>':'')+'</div><div class="sec-head"><p class="eyebrow"><span>'+fmt(L().chal,{n:n})+' · '+s.eyebrow+'</span><span class="badge-done" data-badge="'+key+'"'+(S.done[key]?'':' hidden')+'>'+ic('check')+L().doneLabel+'</span></p><h2 class="statement">'+s.statement+'</h2><p class="intro">'+s.intro+'</p></div>';
 }
 const takeaway=t=>'<div class="takeaway">'+ic('shield')+'<div><small>'+(lang==='tr'?'ANA ÇIKARIM':'KEY TAKEAWAY')+'</small><p>'+t+'</p></div></div>';
 function updateBadges(){KEYS.forEach(k=>document.querySelectorAll('[data-badge="'+k+'"]').forEach(el=>{el.hidden=!S.done[k];}));}
@@ -830,10 +834,24 @@ function toast(msg,btn,target,icon){
 }
 const unlocked=()=>['face','pass','posts','scam'].every(k=>S.done[k]);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function nextTarget(from){
+ const i=KEYS.indexOf(from);
+ for(let n=1;n<KEYS.length;n++){
+  const k=KEYS[(i+n)%KEYS.length];
+  if(S.done[k])continue;
+  if(k==='priv'&&!unlocked())continue;
+  return k;
+ }
+ return allDone()?'final':null;
+}
 function refreshBar(key){
  const w=document.querySelector('#'+key+' .wrap');if(!w)return;
  const old=w.querySelector('.donebar');if(old)old.remove();
- if(S.done[key]&&key!=='priv')w.insertAdjacentHTML('beforeend','<div class="panel donebar" role="status">'+ic('check')+'<b>'+L().doneLabel+'</b><button class="btn btn-primary" data-action="go" data-target="home">'+L().backHome+'</button></div>');
+ if(S.done[key]&&key!=='priv'){
+  const t=nextTarget(key);
+  const nb=t?'<button class="btn btn-primary" data-action="next" data-from="'+key+'">'+(t==='final'?L().nextFinal:L().nextChallenge)+ic('arrow')+'</button>':'';
+  w.insertAdjacentHTML('beforeend','<div class="panel donebar" role="status">'+ic('check')+'<b>'+L().doneLabel+'</b><button class="btn btn-ghost" data-action="go" data-target="home">'+L().backHome+'</button>'+nb+'</div>');
+ }
 }
 function complete(k){
  if(S.done[k])return;
@@ -1155,6 +1173,7 @@ document.addEventListener('click',e=>{
   case 'go':if(S.modal){S.modal=null;renderModal();}setView(d.target);break;
   case 'scrim':closeModal();break;
   case 'lang':lang=d.l;try{localStorage.setItem('tbyp-lang',lang);}catch(x){}renderAll();refocus(lang==='en'?'#langEn':'#langTr');break;
+  case 'next':setView(nextTarget(d.from)||'home');break;
   case 'how':openModal('how');break;
   case 'start':S.modal=null;renderModal();setView('face');break;
   case 'badgeMake':makeBadge();break;
